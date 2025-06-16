@@ -1,4 +1,6 @@
 import grpc
+from threading import Thread
+from shared.rabbitmq_config import consume_events
 from server.grpc_definitions import drone_pb2, drone_pb2_grpc
 
 def listar_drones(stub):
@@ -21,6 +23,13 @@ def enviar_comando(stub):
 def main():
     channel = grpc.insecure_channel('localhost:50051')
     stub = drone_pb2_grpc.DroneControlStub(channel)
+
+    # Inicia um consumidor RabbitMQ em thread separada
+    def mostrar_eventos(msg):
+        print(f"\n🔔 EVENTO: {msg}")
+
+    Thread(target=consume_events, args=(mostrar_eventos,), daemon=True).start()
+
 
     while True:
         print("\n=== Central de Comando ===")

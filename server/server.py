@@ -2,8 +2,9 @@ import grpc
 from concurrent import futures
 import threading
 
-from grpc_definitions import drone_pb2, drone_pb2_grpc 
-import socket_handler
+from shared.rabbitmq_config import publish_event
+from server.grpc_definitions import drone_pb2, drone_pb2_grpc 
+import server.socket_handler as socket_handler
 import pika
 
 # --- CONFIGURAÇÕES RABBITMQ --- #
@@ -26,7 +27,7 @@ class DroneControlService(drone_pb2_grpc.DroneControlServicer):
         print(f"[DEBUG] Tentando enviar comando para: '{request.drone_id}'")
         if success:
             msg = f"Comando '{request.command}' enviado ao drone {request.drone_id}"
-            publish_event(f"[COMANDO] {msg}")
+            publish_event(f"COMANDO: '{request.command}' enviado para {request.drone_id}")
             return drone_pb2.CommandResponse(success=True, message=msg)
         else:
             return drone_pb2.CommandResponse(success=False, message="Drone não encontrado")
