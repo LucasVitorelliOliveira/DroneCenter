@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package drone;
+
+service DroneControl {
+  // Envia comando a um drone
+  rpc SendCommand(CommandRequest) returns (CommandResponse);
+  // Lista drones disponíveis
+  rpc ListDrones(Empty) returns (DroneList);
+}
+
+message Empty {}
+
+message CommandRequest {
+  string drone_id = 1;
+  string command = 2;
+}
+
+message CommandResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DroneInfo {
+  string drone_id = 1;
+  string status = 2;
+}
+
+message DroneList {
+  repeated DroneInfo drones = 1;
+}
