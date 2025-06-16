@@ -1,6 +1,9 @@
 import socket
 import threading
 
+
+from shared.rabbitmq_config import publish_event
+
 # Mapeia drones conectados
 connected_drones = {}
 
@@ -14,7 +17,10 @@ def handle_drone_connection(conn, addr):
             data = conn.recv(1024)
             if not data:
                 break
-            print(f"[SOCKET] {drone_id} diz: {data.decode()}")
+
+            mensagem = data.decode().strip()
+            print(f"[SOCKET] {drone_id} diz: {mensagem}")
+            publish_event(f"{drone_id}:::{mensagem}")
     except Exception as e:
         print(f"[ERRO] Drone {addr} caiu: {e}")
     finally:
