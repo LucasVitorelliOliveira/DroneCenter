@@ -59,6 +59,7 @@ def consume_events(callback):
     except Exception as e:
         print("[RabbitMQ ERRO - consume]", e)
 
+
 def wait_for_rabbitmq_ready(host='localhost', port=5672, timeout=60):
     print("[RabbitMQ] Aguardando RabbitMQ ficar pronto...")
     start_time = time.time()

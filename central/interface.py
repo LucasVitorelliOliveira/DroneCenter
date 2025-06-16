@@ -34,7 +34,10 @@ class DroneControlGUI:
         self.grpc_stub = drone_pb2_grpc.DroneControlStub(self.grpc_channel)
 
         def processar_evento(msg):
-            print(f"[INTERFACE] Mensagem recebida: {msg}")  # ⬅ debug
+            print(f"[INTERFACE] Mensagem recebida: {msg}")
+
+            self.set_indicator("rabbit_consume", True)
+
             if "POS=" in msg and "BATT=" in msg:
                 try:
                     drone_id, dados = msg.split(":::")
@@ -52,13 +55,32 @@ class DroneControlGUI:
 
     def _build_status_area(self):
         self.start_button = ttk.Button(self.status_frame, text="Iniciar Sistemas", command=self.iniciar_sistemas)
-        self.start_button.pack(side="left", padx=10, pady=5)
+        self.start_button.grid(row=0, column=0, padx=5, pady=5)
 
         self.stop_button = ttk.Button(self.status_frame, text="Desligar Sistemas", command=self.desligar_sistemas)
-        self.stop_button.pack(side="left", padx=10)
+        self.stop_button.grid(row=0, column=1, padx=5)
 
         self.status_label = ttk.Label(self.status_frame, text="Aguardando inicialização...")
-        self.status_label.pack(side="left", padx=10)
+        self.status_label.grid(row=0, column=2, padx=5)
+
+        # Novos indicadores
+        label_names = {
+            "server":          "Server",
+            "simulator":       "Simulador",
+            "rabbit_service":  "RabbitMQ",
+            "rabbit_broker":   "Broker",
+            "rabbit_consume":  "Consumo"
+        }
+
+        self.indicadores_status = {}
+
+        col = 1
+        for key, pretty in label_names.items():
+            var   = tk.StringVar(value=f"🔴 {pretty}")
+            label = tk.Label(self.status_frame, textvariable=var, fg="red", anchor="w")
+            label.grid(row=1, column=col, sticky="w", padx=10)
+            self.indicadores_status[key] = (var, label, pretty)   # ← guardo var, label e nome bonitinho
+            col += 1
 
     def _build_drone_displays(self):
         self.drone_labels = {}
@@ -100,7 +122,6 @@ class DroneControlGUI:
 
             # Iniciar RabbitMQ via Docker
             try:
-                import docker
                 from shared.rabbitmq_config import wait_for_rabbitmq_ready
 
                 client = docker.from_env()
@@ -141,6 +162,12 @@ class DroneControlGUI:
                 self.sim_proc = subprocess.Popen([python_exec, "-m", "simulator.simulator"])
                 print("✔️ Servidor e simulador iniciados")
                 self.status_label.config(text="Sistemas iniciados ✅")
+
+                self.set_indicator("server", True)
+                self.set_indicator("simulator", True)
+                self.set_indicator("rabbit_service", True)
+                self.set_indicator("rabbit_broker", True)
+
             except Exception as e:
                 print(f"[ERRO ao iniciar server/sim]: {e}")
                 self.status_label.config(text="Erro ao iniciar subprocessos")
@@ -173,6 +200,9 @@ class DroneControlGUI:
 
             self.status_label.config(text="Sistemas desligados ❌")
 
+            for key in self.indicadores_status:
+                self.set_indicator(key, False)
+
         threading.Thread(target=stop, daemon=True).start()
 
     def enviar_comando(self):
@@ -188,6 +218,21 @@ class DroneControlGUI:
             self.log_box.insert(tk.END, f"✅ {response.message}\n")
         except Exception as e:
             self.log_box.insert(tk.END, f"❌ Erro ao enviar comando: {e}\n")
+
+    def set_indicator(self, key, online: bool):
+        """
+        Atualiza texto e cor do indicador.
+        online=True  👉 🟢 + verde
+        online=False 👉 🔴 + vermelho
+        """
+        def _update():
+            if key in self.indicadores_status:
+                var, lbl, pretty = self.indicadores_status[key]
+                emoji  = "🟢" if online else "🔴"
+                color  = "green" if online else "red"
+                var.set(f"{emoji} {pretty}")
+                lbl.config(fg=color)
+        self.master.after(0, _update)   # garante execução na thread do Tk
 
 if __name__ == "__main__":
     root = tk.Tk()
