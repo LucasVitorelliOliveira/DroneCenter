@@ -35,8 +35,11 @@ class DroneControlGUI:
 
         def processar_evento(msg):
             print(f"[INTERFACE] Mensagem recebida: {msg}")
-
-            self.set_indicator("rabbit_consume", True)
+            if "OFFLINE" in msg:
+                drone_id = msg.split(":::")[0]
+                if drone_id in self.drone_labels:
+                    self.drone_labels[drone_id].set("Status: OFFLINE\nPOS: (-,-)\nBATT: 0%")
+                return
 
             if "POS=" in msg and "BATT=" in msg:
                 try:

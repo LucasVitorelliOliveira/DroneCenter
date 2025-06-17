@@ -15,6 +15,10 @@ class Drone(threading.Thread):
         self.running = True
         self.conn = None
 
+        self.pos_x = random.randint(0, 100)
+        self.pos_y = random.randint(0, 100)
+        self.battery = random.randint(30, 100)
+
     def connect(self):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.conn.connect((SERVER_HOST, SERVER_PORT))
@@ -25,13 +29,20 @@ class Drone(threading.Thread):
     def run(self):
         self.connect()
         # Simula envio de dados periódicos
-        while self.running:
+        while self.running and self.battery > 0:
             try:
-                # Simula status
-                pos_x = random.randint(0, 100)
-                pos_y = random.randint(0, 100)
-                battery = random.randint(20, 100)
-                status_msg = f"POS=({pos_x},{pos_y}); BATT={battery}%"
+               # Atualiza posição (±1 ou 0)
+                self.pos_x += random.choice([-1, 0, 1])
+                self.pos_y += random.choice([-1, 0, 1])
+
+                # Garante que fique no espaço 0–100
+                self.pos_x = max(0, min(100, self.pos_x))
+                self.pos_y = max(0, min(100, self.pos_y))
+
+                # Diminui a bateria
+                self.battery -= 1
+
+                status_msg = f"POS=({self.pos_x},{self.pos_y}); BATT={self.battery}%"
                 self.conn.sendall(status_msg.encode())
 
                 # Verifica se há comandos recebidos do servidor
@@ -47,6 +58,12 @@ class Drone(threading.Thread):
             except Exception as e:
                 print(f"[{self.drone_id}] ERRO: {e}")
                 self.running = False
+
+            offline_msg = "OFFLINE"
+            try:
+                self.conn.sendall(offline_msg.encode())
+            except:
+                pass 
         self.conn.close()
 
 def iniciar_simulacao(numero_drones=3):
